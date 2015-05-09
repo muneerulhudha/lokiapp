@@ -20,6 +20,7 @@ var bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use('/scripts', express.static(__dirname + '/public/scripts'));
+app.use('/stylesheets', express.static(__dirname + '/public/styles'));
 
 var port = process.env.PORT || 8080;        // set our port
 
