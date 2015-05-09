@@ -1,0 +1,82 @@
+<html>
+<head>
+<meta charset=utf-8 />
+<title>Loki App</title>
+</head>
+<body>
+  
+  <input type="text" id="latitude" placeholder="latitude">
+  <input type="text" id="longitude" placeholder="longitude">
+  <div>
+  <img id="image" src="" />
+  </div>
+  <div id="map" style="width:500px; height:500px"></div>
+  
+  <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
+  <script>
+  	function GetImage() {
+	    var xmlhttp = new XMLHttpRequest();
+	    xmlhttp.onreadystatechange = function(){
+	    	if (xmlhttp.readyState==4 && xmlhttp.status==200)
+		    {
+		    	var jsonObj = xmlhttp.responseText;
+
+		    	document.getElementById("image").src = JSON.parse(jsonObj).url;
+		    }
+	    }
+	    xmlhttp.open("GET","http://localhost:8080/api/images/554e4d86dc9d54326b00000d",true);
+	    xmlhttp.send();
+	}
+
+	function initialize() {
+		var $latitude = document.getElementById('latitude');
+		var $longitude = document.getElementById('longitude');
+		var latitude = 50.715591133433854
+		var longitude = -3.53485107421875;
+		var zoom = 7;
+		
+		var LatLng = new google.maps.LatLng(latitude, longitude);
+		
+		var mapOptions = {
+			zoom: zoom,
+			center: LatLng,
+			panControl: false,
+			zoomControl: false,
+			scaleControl: true,
+			mapTypeId: google.maps.MapTypeId.ROADMAP
+		}	
+		
+		var map = new google.maps.Map(document.getElementById('map'),mapOptions);
+		
+		var noPoi = [
+		{
+		    featureType: "poi",
+		    stylers: [
+		      { visibility: "off" }
+		    ]   
+		  }
+		];      
+		
+		map.setOptions({styles: noPoi});
+		
+		var marker = new google.maps.Marker({
+			position: LatLng,
+			map: map,
+			title: 'Drag Me!',
+			draggable: true
+		});
+		
+		google.maps.event.addListener(marker, 'dragend', function(marker){
+			var latLng = marker.latLng;
+			$latitude.value = latLng.lat();
+			$longitude.value = latLng.lng();
+		});
+		
+		
+	}
+	initialize();
+	GetImage();
+	</script>
+  
+</body>
+</html>
