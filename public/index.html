@@ -12,6 +12,11 @@
 	<!-- Latest compiled and minified JavaScript -->
 	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
 
+	<script src="http://192.168.25.88:3700/socket.io/socket.io.js"></script>
+
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/0.5.0/sweet-alert.min.js"></script> 
+	<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/0.5.0/sweet-alert.css">
+
 	<style>
 		.btn{
 
@@ -30,37 +35,110 @@
 </head>
 <body style = "background: black">
   
-  <!-- <input type="text" id="latitude" placeholder="latitude">
-  <input type="text" id="longitude" placeholder="longitude"> -->
-  <div class="col-md-4" style = "background-color: black">
-  		<img id="image" src="" style="max-width:100%; max-height:100%; margin-top: 12px"/>
-  		<br /><br /><br /><br />
-  		<div align="center">
-  		<button type="button" class="btn btn-primary btn-block">Submit</button>
-  		</div>
+  <input type="hidden" id="latitude" placeholder="latitude" >
+  <input type="hidden" id="longitude" placeholder="longitude">
+  <div class="container" id="welcome">
+  	<div class="jumbotron">
+  		<center><h1> Welcome to Loki </h1>
+  		<p id="waiting"></p></center>
+  	</div> 
+  	<center><button type="button" class="btn btn-success btn-lg" onclick="play()">Click to Play</button></center>
   </div>
-  <div class="col-md-8" style = "border: 5px solid black;">
-  		<div id="map" style="width:100%; height:97%; margin-top: 8px"></div>
-  </div>
+
   <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
   <script>
-  	function GetImage() {
+  	
+  	var socket = io.connect('http://192.168.25.88:3700');
+  	var image_array = [];
+  	var count = 0;
+  	var $latitude, $longitude;
+  	var random_value;
+
+  	function submitAnswer()	{
+  		// alert($latitude.value + ';' + $longitude.value);
+  		var actual_lat = image_array[count].lat;
+  		var actual_long = image_array[count].long; 
+
+  		var dist = getDistanceFromLatLonInKm(parseFloat(actual_lat), parseFloat(actual_long),$latitude.value, $longitude.value);
+
+  		console.log(dist);
+
+  		random_value = Math.random();
+
+  		socket.emit('answer-payload', {
+  			distance : dist,
+  			rand :  random_value
+  		});
+  	};
+
+  	socket.on('Winner', function(data){
+  		if(data.rand == random_value){
+  			swal('You Won', 'Congratulations', 'success');
+  		}else{
+  			swal('You lost', 'Tough luck', 'error');
+  		}
+  		count++;
+  		GetImage();
+  		initialize();
+  	});
+
+  	function getDistanceFromLatLonInKm(lat1,lon1,lat2,lon2) {
+	  var R = 6371; // Radius of the earth in km
+	  var dLat = deg2rad(lat2-lat1);  // deg2rad below
+	  var dLon = deg2rad(lon2-lon1);
+	  var a =
+	    Math.sin(dLat/2) * Math.sin(dLat/2) +
+	    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+	    Math.sin(dLon/2) * Math.sin(dLon/2)
+	    ;
+	  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+	  var d = R * c; // Distance in km
+	  return d;
+	}
+	 
+	function deg2rad(deg) {
+	  return deg * (Math.PI/180)
+	}
+
+
+  	function play() {
+  		document.getElementById('waiting').innerHTML = "Waiting to match you";
+  	};
+
+  	socket.on('game-ready', function(data){
+  		//alert(data.message);
+
+  		document.getElementById('welcome').innerHTML = "<div class=\"col-md-4\" style = \"background-color: black\"><img id=\"image\" src=\"\" style=\"max-width:100%; max-height:100%; margin-top: 12px\"/><br /><br /><br /><br /><div align=\"center\"><button type=\"button\" class=\"btn btn-primary btn-block\" onclick = \"submitAnswer()\">Submit</button></div></div><div class=\"col-md-8\" style = \"border: 5px solid black;\"><div id=\"map\" style=\"width:100%; height:97%; margin-top: 8px\"></div></div>";
+
+  		GetImage();
+  		initialize();
+  	});
+
+  	function DisplayImage() {
+  		console.log('count ' + count);
+  		console.log(image_array[count]);
+  		document.getElementById("image").src = image_array[count].url;
+  	};
+
+    function GetImage() {
 	    var xmlhttp = new XMLHttpRequest();
 	    xmlhttp.onreadystatechange = function(){
 	    	if (xmlhttp.readyState==4 && xmlhttp.status==200)
 		    {
 		    	var jsonObj = xmlhttp.responseText;
-
-		    	document.getElementById("image").src = JSON.parse(jsonObj).url;
+		    	for (var i = 10 ; i >= 0; i--) {
+		    		image_array[i] = JSON.parse(jsonObj)[i];
+		    	};
+		    	DisplayImage();
 		    }
 	    }
-	    xmlhttp.open("GET","http://localhost:8080/api/images/554e4d86dc9d54326b00000d",true);
+	    xmlhttp.open("GET","http://192.168.25.88:8080/api/images",true);
 	    xmlhttp.send();
 	}
 
 	function initialize() {
-		var $latitude = document.getElementById('latitude');
-		var $longitude = document.getElementById('longitude');
+		$latitude = document.getElementById('latitude');
+		$longitude = document.getElementById('longitude');
 		var latitude = 50.715591133433854
 		var longitude = -3.53485107421875;
 		var zoom = 7;
@@ -103,11 +181,8 @@
 			$latitude.value = latLng.lat();
 			$longitude.value = latLng.lng();
 		});
-		
-		
 	}
-	initialize();
-	GetImage();
+
 	</script>
   
 </body>
